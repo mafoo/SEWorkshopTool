@@ -1,27 +1,28 @@
-﻿using Phoenix.WorkshopTool;
-using System;
+﻿using System;
+using System.Linq;
+using System.Reflection;
+using Phoenix.WorkshopTool;
 
 namespace Phoenix.MEWorkshopTool
 {
     public class Program : ProgramBase
     {
+        private static string m_gamePath;
+
         public static int Main(string[] args)
         {
-            AppDomain.CurrentDomain.AssemblyResolve += GameBase.CurrentDomain_AssemblyResolve;
+            m_gamePath = AssemblyHelper.FindSteamGameRoot("MedievalEngineers");
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
-            if (args != null)
+            if (args != null && args.Any(arg => arg == "--vrage-error-log-upload"))
             {
-                foreach (string arg in args)
-                {
-                    if (arg == "--vrage-error-log-upload")
-                        return 0;
-                }
+                return 0;
             }
 
             try
             {
                 var game = new MedievalGame();
-                int resultCode = game.InitGame(args);
+                var resultCode = game.InitGame(args);
                 return resultCode;
             }
             catch
@@ -29,6 +30,12 @@ namespace Phoenix.MEWorkshopTool
                 CheckForUpdate();
                 throw;
             }
+        }
+
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            return Assembly.LoadFrom(
+                AssemblyHelper.ResolvePathWithRoot(new AssemblyName(args.Name).Name, ".dll", m_gamePath));
         }
     }
 }

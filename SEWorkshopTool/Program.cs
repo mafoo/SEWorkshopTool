@@ -1,14 +1,18 @@
-﻿using Phoenix.WorkshopTool;
-using System;
+﻿using System;
+using System.Reflection;
+using Phoenix.WorkshopTool;
 
 namespace Phoenix.SEWorkshopTool
 {
     public class Program : ProgramBase
     {
+        private static string m_gamePath;
+
         public static int Main(string[] args)
         {
-            AppDomain.CurrentDomain.AssemblyResolve += GameBase.CurrentDomain_AssemblyResolve;
-            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += GameBase.CurrentDomain_ReflectionOnlyAssemblyResolve;
+            m_gamePath = AssemblyHelper.FindSteamGameRoot("SpaceEngineers");
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += OnReflectionOnlyAssemblyResolve;
 
             try
             {
@@ -20,6 +24,18 @@ namespace Phoenix.SEWorkshopTool
                 CheckForUpdate();
                 throw;
             }
+        }
+
+        private static Assembly OnReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            return Assembly.LoadFrom(
+                AssemblyHelper.ResolvePathWithRoot(new AssemblyName(args.Name).Name, ".exe", m_gamePath));
+        }
+
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            return Assembly.LoadFrom(
+                AssemblyHelper.ResolvePathWithRoot(new AssemblyName(args.Name).Name, ".dll", m_gamePath));
         }
     }
 }
