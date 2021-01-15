@@ -1,58 +1,49 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{951AC7F6-8487-428E-8BFF-B26D689FD259}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net461</TargetFramework>
     <RootNamespace>Phoenix.MEWorkshopTool</RootNamespace>
-    <AssemblyName>MEWorkshopTool</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>false</Deterministic>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>x64</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x64</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+
+  <!-- #Region Folder Detects here -->
+  <!-- If none of the below matches your instalation simply clone one and tweak it to match your setup -->
+  <PropertyGroup Label="UserMacros"
+                 Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\MedievalEngineers\Bin64')">
+    <MEBinDir>C:\Program Files (x86)\Steam\steamapps\common\MedievalEngineers\Bin64</MEBinDir>
+  </PropertyGroup>
+  <PropertyGroup Label="UserMacros"
+                 Condition="Exists('F:\Games\Steam\steamapps\common\MedievalEngineers\Bin64')">
+    <MEBinDir>F:\Games\Steam\steamapps\common\MedievalEngineers\Bin64</MEBinDir>
+  </PropertyGroup>
+  <!-- #End Region -->
+
   <ItemGroup>
-    <Reference Include="MedievalEngineers.Game">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\MedievalEngineers.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="MedievalEngineers.Game" Private="False">
+      <HintPath>$(MEBinDir)\MedievalEngineers.Game.dll</HintPath>
     </Reference>
-    <Reference Include="Sandbox.Game, Version=0.1.6345.31181, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\Sandbox.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Sandbox.Game" Private="False">
+      <HintPath>$(MEBinDir)\Sandbox.Game.dll</HintPath>
     </Reference>
-    <Reference Include="Sandbox.Graphics">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\Sandbox.Graphics.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Sandbox.Graphics" Private="False">
+      <HintPath>$(MEBinDir)\Sandbox.Graphics.dll</HintPath>
     </Reference>
-    <Reference Include="Steamworks.NET">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\Steamworks.NET.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Steamworks.NET" Private="False">
+      <HintPath>$(MEBinDir)\Steamworks.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -63,66 +54,49 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="VRage">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage" Private="False">
+      <HintPath>$(MEBinDir)\VRage.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Game">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Game" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Game.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Library">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Library.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Library" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Library.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Render">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Render.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Render" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Render.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Render11">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Render11.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Render11" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Render11.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Scripting">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Scripting.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Scripting" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Scripting.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Steam">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\MedievalEngineers\Bin64\VRage.Steam.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Steam" Private="False">
+      <HintPath>$(MEBinDir)\VRage.Steam.dll</HintPath>
     </Reference>
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="MedievalGame.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\.wtignore">
-      <Link>.wtignore</Link>
+    <None Update="..\.wtignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="App.config" />
-    <None Include="MEWT.config">
+    <None Update="MEWT.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="CommandLineParser">
-      <Version>1.9.71</Version>
-    </PackageReference>
+    <PackageReference Include="CommandLineParser" Version="1.9.71" />
+    <PackageReference Include="Gameloop.Vdf" Version="0.6.1" />
+    <PackageReference Include="Gameloop.Vdf.JsonConverter" Version="0.2.1" />
   </ItemGroup>
+
   <Import Project="..\WorkshopToolCommon\WorkshopToolCommon.projitems" Label="Shared" />
   <Import Project="..\Updater\Updater.projitems" Label="Shared" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command "&amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir)MEWT.config, $(TargetDir).wtignore -DestinationPath $(TargetDir)$(TargetName)-latest.zip}"</PostBuildEvent>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec
+      Command="powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command &quot;&amp;amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir)MEWT.config, $(TargetDir).wtignore -DestinationPath $(TargetDir)$(TargetName)-latest.zip}&quot;" />
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

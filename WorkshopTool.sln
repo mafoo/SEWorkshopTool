@@ -1,29 +1,32 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.489
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SEWorkshopTool", "SEWorkshopTool\SEWorkshopTool.csproj", "{B45A96AB-94B8-46C2-813A-32FD0E1D8390}"
-EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "WorkshopToolCommon", "WorkshopToolCommon\WorkshopToolCommon.shproj", "{F854B41F-D141-467D-A009-74BB31E7A873}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MEWorkshopTool", "MEWorkshopTool\MEWorkshopTool.csproj", "{951AC7F6-8487-428E-8BFF-B26D689FD259}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{C8E85CFE-78CA-4450-A23D-55FAC0D16BD9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B5CC96C1-5376-475B-BE32-68C46111C94C}"
 	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		.wtignore = .wtignore
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Updater", "Updater\Updater.shproj", "{D50C7559-DF0E-477A-9AE7-0B5927530CAE}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SEWorkshopTool", "SEWorkshopTool\SEWorkshopTool.csproj", "{416E4575-7684-4AB8-8210-2CC822F6F8FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MEWorkshopTool", "MEWorkshopTool\MEWorkshopTool.csproj", "{63639E4D-4D59-421D-A16D-35C440DDC2D5}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		Updater\Updater.projitems*{951ac7f6-8487-428e-8bff-b26d689fd259}*SharedItemsImports = 4
-		WorkshopToolCommon\WorkshopToolCommon.projitems*{951ac7f6-8487-428e-8bff-b26d689fd259}*SharedItemsImports = 4
-		Updater\Updater.projitems*{b45a96ab-94b8-46c2-813a-32fd0e1d8390}*SharedItemsImports = 4
-		WorkshopToolCommon\WorkshopToolCommon.projitems*{b45a96ab-94b8-46c2-813a-32fd0e1d8390}*SharedItemsImports = 4
+		Updater\Updater.projitems*{416e4575-7684-4ab8-8210-2cc822f6f8fc}*SharedItemsImports = 5
+		WorkshopToolCommon\WorkshopToolCommon.projitems*{416e4575-7684-4ab8-8210-2cc822f6f8fc}*SharedItemsImports = 5
+		Updater\Updater.projitems*{63639e4d-4d59-421d-a16d-35c440ddc2d5}*SharedItemsImports = 5
+		WorkshopToolCommon\WorkshopToolCommon.projitems*{63639e4d-4d59-421d-a16d-35c440ddc2d5}*SharedItemsImports = 5
 		Updater\Updater.projitems*{d50c7559-df0e-477a-9ae7-0b5927530cae}*SharedItemsImports = 13
 		WorkshopToolCommon\WorkshopToolCommon.projitems*{f854b41f-d141-467d-a009-74bb31e7a873}*SharedItemsImports = 13
 	EndGlobalSection
@@ -32,18 +35,18 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B45A96AB-94B8-46C2-813A-32FD0E1D8390}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B45A96AB-94B8-46C2-813A-32FD0E1D8390}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B45A96AB-94B8-46C2-813A-32FD0E1D8390}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B45A96AB-94B8-46C2-813A-32FD0E1D8390}.Release|Any CPU.Build.0 = Release|Any CPU
-		{951AC7F6-8487-428E-8BFF-B26D689FD259}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{951AC7F6-8487-428E-8BFF-B26D689FD259}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{951AC7F6-8487-428E-8BFF-B26D689FD259}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{951AC7F6-8487-428E-8BFF-B26D689FD259}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C8E85CFE-78CA-4450-A23D-55FAC0D16BD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C8E85CFE-78CA-4450-A23D-55FAC0D16BD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8E85CFE-78CA-4450-A23D-55FAC0D16BD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8E85CFE-78CA-4450-A23D-55FAC0D16BD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{416E4575-7684-4AB8-8210-2CC822F6F8FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{416E4575-7684-4AB8-8210-2CC822F6F8FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{416E4575-7684-4AB8-8210-2CC822F6F8FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{416E4575-7684-4AB8-8210-2CC822F6F8FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63639E4D-4D59-421D-A16D-35C440DDC2D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63639E4D-4D59-421D-A16D-35C440DDC2D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63639E4D-4D59-421D-A16D-35C440DDC2D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63639E4D-4D59-421D-A16D-35C440DDC2D5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

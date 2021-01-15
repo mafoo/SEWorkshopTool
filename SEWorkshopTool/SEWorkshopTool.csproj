@@ -1,63 +1,53 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B45A96AB-94B8-46C2-813A-32FD0E1D8390}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net461</TargetFramework>
     <RootNamespace>Phoenix.SEWorkshopTool</RootNamespace>
-    <AssemblyName>SEWorkshopTool</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Deterministic>false</Deterministic>
+    <LangVersion>8</LangVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;SE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+    <DefineConstants>DEBUG;TRACE;SE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <PlatformTarget>x64</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE;SE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <!-- #Region Folder Detects here -->
+  <!-- If none of the below matches your instalation simply clone one and tweak it to match your setup -->
+  <PropertyGroup Label="UserMacros"
+                 Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64')">
+    <SEBinDir>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
+  </PropertyGroup>
+  <PropertyGroup Label="UserMacros" 
+                 Condition="Exists('F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64')">
+    <SEBinDir>F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
+  </PropertyGroup>
+  <!-- #End Region -->
+
   <ItemGroup>
-    <Reference Include="EmptyKeys.UserInterface.Core">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\EmptyKeys.UserInterface.Core.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="EmptyKeys.UserInterface.Core" Private="False">
+      <HintPath>$(SEBinDir)\EmptyKeys.UserInterface.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Sandbox.Common, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\Sandbox.Common.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Sandbox.Common" Private="False">
+      <HintPath>$(SEBinDir)\Sandbox.Common.dll</HintPath>
     </Reference>
-    <Reference Include="Sandbox.Game">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\Sandbox.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Sandbox.Game" Private="False">
+      <HintPath>$(SEBinDir)\Sandbox.Game.dll</HintPath>
     </Reference>
-    <Reference Include="SpaceEngineers.Game, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\SpaceEngineers.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="SpaceEngineers.Game" Private="False">
+      <HintPath>$(SEBinDir)\SpaceEngineers.Game.dll</HintPath>
     </Reference>
-    <Reference Include="Steamworks.NET">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\Steamworks.NET.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Steamworks.NET" Private="False">
+      <HintPath>$(SEBinDir)\Steamworks.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -70,83 +60,55 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="VRage, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage" Private="False">
+      <HintPath>$(SEBinDir)\VRage.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Game, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Game.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Game" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Game.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Library, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Library.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Library" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Library.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Mod.Io">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Mod.Io.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Mod.Io" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Mod.Io.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Platform.Windows">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Platform.Windows.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Platform.Windows" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Platform.Windows.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Render, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Render.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Render" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Render.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Render11, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Render11.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Render11" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Render11.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Scripting, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Scripting.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Scripting" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Scripting.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.Steam">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.Steam.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.Steam" Private="False">
+      <HintPath>$(SEBinDir)\VRage.Steam.dll</HintPath>
     </Reference>
-    <Reference Include="VRage.UserInterface">
-      <HintPath>..\..\..\Program Files\Steam\SteamApps\common\SpaceEngineers\Bin64\VRage.UserInterface.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="VRage.UserInterface" Private="False">
+      <HintPath>$(SEBinDir)\VRage.UserInterface.dll</HintPath>
     </Reference>
   </ItemGroup>
+
   <ItemGroup>
-    <Compile Include="Program.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SpaceEngineersGame.cs" />
-    <Compile Include="SpaceGame.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\.wtignore">
-      <Link>.wtignore</Link>
+    <None Update="..\.wtignore">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="App.config" />
   </ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="CommandLineParser">
-      <Version>1.9.71</Version>
-    </PackageReference>
+    <PackageReference Include="CommandLineParser" Version="1.9.71" />
+    <PackageReference Include="Gameloop.Vdf" Version="0.6.1" />
+    <PackageReference Include="Gameloop.Vdf.JsonConverter" Version="0.2.1" />
   </ItemGroup>
+
   <Import Project="..\WorkshopToolCommon\WorkshopToolCommon.projitems" Label="Shared" />
   <Import Project="..\Updater\Updater.projitems" Label="Shared" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>if NOT exist "$(TargetDir)steam_appid.txt" echo 244850 &gt; "$(TargetDir)steam_appid.txt"
-powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command "&amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir).wtignore, $(TargetDir)steam_appid.txt -DestinationPath $(TargetDir)$(TargetName)-latest.zip}"</PostBuildEvent>
-  </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec
+      Command="if NOT exist &quot;$(TargetDir)steam_appid.txt&quot; echo 244850 &amp;gt; &quot;$(TargetDir)steam_appid.txt&quot;&#xD;&#xA;powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command &quot;&amp;amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir).wtignore, $(TargetDir)steam_appid.txt -DestinationPath $(TargetDir)$(TargetName)-latest.zip}&quot;" />
   </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>
