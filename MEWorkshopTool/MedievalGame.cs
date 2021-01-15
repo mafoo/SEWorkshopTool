@@ -1,13 +1,18 @@
-﻿using Medieval;
+﻿using System.Reflection;
+using Medieval;
 using Phoenix.WorkshopTool;
 using Sandbox;
+using Sandbox.Engine.Platform;
 using Sandbox.Game;
-using VRage;
-using VRage.GameServices;
+using VRage.Engine;
+using VRage.Engine.Util;
+using VRage.FileSystem;
+using VRage.Logging;
+using VRage.Plugins;
 
 namespace Phoenix.MEWorkshopTool
 {
-    class MedievalGame : GameBase
+    internal class MedievalGame : GameBase
     {
         protected override bool SetupBasicGameInfo()
         {
@@ -24,25 +29,33 @@ namespace Phoenix.MEWorkshopTool
         {
             MyMedievalGame.SetupBasicGameInfo();
             m_startup = new MyCommonProgramStartup(args);
-            VRage.FileSystem.MyFileSystem.Init(MyPerGameSettings.BasicGameInfo.ApplicationName);
+            MyFileSystem.Init(MyPerGameSettings.BasicGameInfo.ApplicationName);
 
-            var appInformation = new VRage.Engine.AppInformation("Medieval Engineers", Medieval.MyMedievalGame.ME_VERSION, "", "", "", Medieval.MyMedievalGame.VersionString);
-            var vrageCore = new VRage.Engine.VRageCore(appInformation, true);
-            var configuration = VRage.Engine.Util.CoreProgram.LoadParameters("MEWT.config");
-            vrageCore.GetType().GetMethod("LoadSystems", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.Invoke(vrageCore, new[] { configuration });
-            vrageCore.GetType().GetField("m_state", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(vrageCore, 1);
-            vrageCore.GetType().GetMethod("InitSystems", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.Invoke(vrageCore, new object[] { configuration.SystemConfiguration, true });
-            vrageCore.GetType().GetMethod("LoadMetadata", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.Invoke(vrageCore, new[] { configuration });
-            vrageCore.GetType().GetMethod("InitSystems", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.Invoke(vrageCore, new object[] { configuration.SystemConfiguration, false });
+            var appInformation = new AppInformation("Medieval Engineers", MyMedievalGame.ME_VERSION, "", "", "",
+                MyMedievalGame.VersionString);
+            var vrageCore = new VRageCore(appInformation, true);
+            var configuration = CoreProgram.LoadParameters("MEWT.config");
+            vrageCore.GetType().GetMethod("LoadSystems", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.Invoke(vrageCore, new[] {configuration});
+            vrageCore.GetType().GetField("m_state", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(vrageCore, 1);
+            vrageCore.GetType().GetMethod("InitSystems", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.Invoke(vrageCore, new object[] {configuration.SystemConfiguration, true});
+            vrageCore.GetType().GetMethod("LoadMetadata", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.Invoke(vrageCore, new[] {configuration});
+            vrageCore.GetType().GetMethod("InitSystems", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.Invoke(vrageCore, new object[] {configuration.SystemConfiguration, false});
 
             m_steamService = new MySteamService();
-            ((MySteamService)(m_steamService)).Init(new VRage.Steam.MySteamService.Parameters() { Server = MySandboxGame.IsDedicated, AppId = AppId });
+            ((MySteamService) m_steamService).Init(new VRage.Steam.MySteamService.Parameters()
+                {Server = Game.IsDedicated, AppId = AppId});
 
-            VRage.Logging.MyLog.Default = MySandboxGame.Log = new VRage.Logging.MyLog();
+            MyLog.Default = MySandboxGame.Log = new MyLog();
             MySandboxGame.Log.Init(MyPerGameSettings.BasicGameInfo.ApplicationName + "ModTool.log", null);
-            VRage.Plugins.MyPlugins.Load();
+            MyPlugins.Load();
             return base.InitGame(args);
         }
+
         protected override MySandboxGame InitGame()
         {
             return new MyMedievalGame();

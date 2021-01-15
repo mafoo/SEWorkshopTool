@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Phoenix.WorkshopTool
+﻿namespace Phoenix.WorkshopTool
 {
     public enum PublishedFileVisibility
     {

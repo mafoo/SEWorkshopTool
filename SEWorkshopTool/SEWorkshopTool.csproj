@@ -23,13 +23,9 @@
 
   <!-- #Region Folder Detects here -->
   <!-- If none of the below matches your instalation simply clone one and tweak it to match your setup -->
-  <PropertyGroup Label="UserMacros"
-                 Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64')">
-    <SEBinDir>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
-  </PropertyGroup>
-  <PropertyGroup Label="UserMacros" 
-                 Condition="Exists('F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64')">
-    <SEBinDir>F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
+  <PropertyGroup Label="UserMacros">
+    <SEBinDir Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64')">C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
+    <SEBinDir Condition="Exists('F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64')">F:\Games\Steam\steamapps\common\SpaceEngineers\Bin64</SEBinDir>
   </PropertyGroup>
   <!-- #End Region -->
 
@@ -107,8 +103,7 @@
   <Import Project="..\WorkshopToolCommon\WorkshopToolCommon.projitems" Label="Shared" />
   <Import Project="..\Updater\Updater.projitems" Label="Shared" />
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec
-      Command="if NOT exist &quot;$(TargetDir)steam_appid.txt&quot; echo 244850 &amp;gt; &quot;$(TargetDir)steam_appid.txt&quot;&#xD;&#xA;powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command &quot;&amp;amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir).wtignore, $(TargetDir)steam_appid.txt -DestinationPath $(TargetDir)$(TargetName)-latest.zip}&quot;" />
+    <Exec Command="if NOT exist &quot;$(TargetDir)steam_appid.txt&quot; echo 244850 &amp;gt; &quot;$(TargetDir)steam_appid.txt&quot;&#xD;&#xA;powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command &quot;&amp;amp; {Compress-Archive -Force -Path $(TargetDir)$(TargetName).exe, $(TargetDir)$(TargetName).exe.config, $(TargetDir)CommandLine.dll, $(TargetDir).wtignore, $(TargetDir)steam_appid.txt -DestinationPath $(TargetDir)$(TargetName)-latest.zip}&quot;" />
   </Target>
 
 </Project>

@@ -1,34 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Phoenix.WorkshopTool
 {
     public class IgnoreFile
     {
         /// <summary>
-        /// Tries to open the passed along .wtignore file, and breaks it down into ignored paths and ignored extensions.
+        ///     Tries to open the passed along .wtignore file, and breaks it down into ignored paths and ignored extensions.
         /// </summary>
         /// <param name="ignoreFilePath">Input - Path of the .wtignore file to parse.</param>
         /// <param name="ignoredExtensions">Output - List of extensions to ignore.</param>
         /// <param name="ignoredPaths">Output - List of paths to ignore.</param>
         /// <returns>True if .wtignore file was parsed, false otherwise.</returns>
-        public static bool TryLoadIgnoreFile(string ignoreFilePath, out HashSet<string> ignoredExtensions, out HashSet<string> ignoredPaths)
+        public static bool TryLoadIgnoreFile(string ignoreFilePath, out HashSet<string> ignoredExtensions,
+            out HashSet<string> ignoredPaths)
         {
             return TryLoadIgnoreFile(ignoreFilePath, null, out ignoredExtensions, out ignoredPaths);
         }
 
         /// <summary>
-        /// Tries to open the passed along .wtignore file, and breaks it down into ignored paths and ignored extensions.
+        ///     Tries to open the passed along .wtignore file, and breaks it down into ignored paths and ignored extensions.
         /// </summary>
         /// <param name="ignoreFilePath">Input - Path of the .wtignore file to parse.</param>
-        /// <param name="relativeApplicablePath">Input - Relative path to apply the ignore file against, if different from <see cref="ignoreFilePath"/>.</param>
+        /// <param name="relativeApplicablePath">
+        ///     Input - Relative path to apply the ignore file against, if different from
+        ///     <see cref="ignoreFilePath" />.
+        /// </param>
         /// <param name="ignoredExtensions">Output - List of extensions to ignore.</param>
         /// <param name="ignoredPaths">Output - List of paths to ignore.</param>
         /// <returns>True if .wtignore file was parsed, false otherwise.</returns>
-        public static bool TryLoadIgnoreFile(string ignoreFilePath, string relativeApplicablePath, out HashSet<string> ignoredExtensions, out HashSet<string> ignoredPaths)
+        public static bool TryLoadIgnoreFile(string ignoreFilePath, string relativeApplicablePath,
+            out HashSet<string> ignoredExtensions, out HashSet<string> ignoredPaths)
         {
             string[] ignoreFileLines = null;
 
@@ -52,18 +55,18 @@ namespace Phoenix.WorkshopTool
 
             ignoredExtensions.Add(".wtignore");
 
-            string modPath = Path.GetDirectoryName(ignoreFilePath);
+            var modPath = Path.GetDirectoryName(ignoreFilePath);
 
             if (!string.IsNullOrEmpty(relativeApplicablePath))
                 modPath = Path.Combine(modPath, relativeApplicablePath);
 
-            foreach (string ignoreFileLine in ignoreFileLines)
+            foreach (var ignoreFileLine in ignoreFileLines)
             {
-                string line = ignoreFileLine.Trim();
+                var line = ignoreFileLine.Trim();
                 if (line.Length == 0)
                     continue;
 
-                string linePath = Path.Combine(modPath, line);
+                var linePath = Path.Combine(modPath, line);
 
                 if (line.StartsWith("#"))
                 {
@@ -77,7 +80,8 @@ namespace Phoenix.WorkshopTool
                         linePath = Path.Combine(modPath, line);
                     }
 
-                    if (!File.Exists(linePath) && !Directory.Exists(linePath) && !line.Contains("/") && !line.Contains("\\"))
+                    if (!File.Exists(linePath) && !Directory.Exists(linePath) && !line.Contains("/") &&
+                        !line.Contains("\\"))
                     {
                         ignoredExtensions.Add(line);
                     }
@@ -93,7 +97,9 @@ namespace Phoenix.WorkshopTool
                             {
                                 if (File.Exists(linePath))
                                 {
-                                    string caseSensitiveFilename = Directory.GetFiles(Path.GetDirectoryName(linePath), Path.GetFileName(linePath)).FirstOrDefault();
+                                    var caseSensitiveFilename = Directory
+                                        .GetFiles(Path.GetDirectoryName(linePath), Path.GetFileName(linePath))
+                                        .FirstOrDefault();
                                     ignoredPaths.Add(caseSensitiveFilename.Remove(0, modPath.Length + 1));
                                 }
                             }
@@ -106,7 +112,7 @@ namespace Phoenix.WorkshopTool
                         }
                     }
                 }
-                else if(line.StartsWith("*"))
+                else if (line.StartsWith("*"))
                 {
                     try
                     {
@@ -131,7 +137,9 @@ namespace Phoenix.WorkshopTool
                         {
                             if (File.Exists(linePath))
                             {
-                                string caseSensitiveFilename = Directory.GetFiles(Path.GetDirectoryName(linePath), Path.GetFileName(linePath)).FirstOrDefault();
+                                var caseSensitiveFilename = Directory
+                                    .GetFiles(Path.GetDirectoryName(linePath), Path.GetFileName(linePath))
+                                    .FirstOrDefault();
                                 ignoredPaths.Add(caseSensitiveFilename.Remove(0, modPath.Length + 1));
                             }
                         }
@@ -148,14 +156,16 @@ namespace Phoenix.WorkshopTool
             return true;
         }
 
-        private static void IgnoreDirectoryRecursively(string basePath, string directory, HashSet<string> ignoredPaths, string searchPattern = "*.*")
+        private static void IgnoreDirectoryRecursively(string basePath, string directory, HashSet<string> ignoredPaths,
+            string searchPattern = "*.*")
         {
             if (searchPattern.Any(c => c != '*' && c != '.'))
             {
                 searchPattern = searchPattern.Trim('/', '\\', '*');
             }
 
-            foreach (string file in Directory.EnumerateFileSystemEntries(directory.Replace("/", "\\"), searchPattern, SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFileSystemEntries(directory.Replace("/", "\\"), searchPattern,
+                SearchOption.AllDirectories))
             {
                 if (File.Exists(file))
                 {

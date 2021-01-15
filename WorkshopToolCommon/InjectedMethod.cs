@@ -1,31 +1,40 @@
-﻿using Sandbox;
-using Sandbox.Engine.Networking;
-using Steamworks;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Threading;
+using Sandbox;
+using Sandbox.Engine.Networking;
+using Steamworks;
 using VRage;
 using VRage.GameServices;
+using VRage.Steam;
+
 #if SE
+using System.IO;
 using VRage.Http;
+using VRage.Mod.Io;
 using MySteam = Sandbox.Engine.Networking.MyGameService;
+
 #endif
 namespace Phoenix.WorkshopTool
 {
-    class InjectedMethod
+    internal class InjectedMethod
     {
 #if SE
-        static IMyGameService MySteam { get => (IMyGameService)MyServiceManager.Instance.GetService<IMyGameService>(); }
+        private static IMyGameService MySteam =>
+            (IMyGameService) MyServiceManager.Instance.GetService<IMyGameService>();
 #endif
-        delegate void SubmitItemUpdateResult(SubmitItemUpdateResult_t result, bool ioFailure);
+        private delegate void SubmitItemUpdateResult(SubmitItemUpdateResult_t result, bool ioFailure);
 #if SE
-        static readonly Assembly steamAssembly = typeof(VRage.Steam.MySteamGameService).Assembly;
-        public static readonly Type MySteamWorkshopItemPublisherType = steamAssembly.GetType("VRage.Steam.MySteamWorkshopItemPublisher");
+        private static readonly Assembly steamAssembly = typeof(MySteamGameService).Assembly;
+
+        public static readonly Type MySteamWorkshopItemPublisherType =
+            steamAssembly.GetType("VRage.Steam.MySteamWorkshopItemPublisher");
+
         public static readonly Type MySteamHelperType = steamAssembly.GetType("VRage.Steam.MySteamHelper");
 #else
-        public static readonly Type MySteamWorkshopItemPublisherType = typeof(VRage.Steam.MySteamWorkshopItemPublisher);
+        public static readonly Type MySteamWorkshopItemPublisherType = typeof(MySteamWorkshopItemPublisher);
         public static readonly Type MySteamHelperType = typeof(VRage.Steam.MySteamHelper);
 #endif
         // THIS IS A HACK TO GET A CHANGELOG TO THIS CODE
@@ -34,7 +43,8 @@ namespace Phoenix.WorkshopTool
 #if SE
         private void UpdatePublishedItem()
 #else
-        public bool UpdatePublishedItem(VRage.Steam.MySteamWorkshopItemPublisher.PublishFields fieldsToPublish, string changeNotes = "")
+        public bool UpdatePublishedItem(MySteamWorkshopItemPublisher.PublishFields fieldsToPublish, string changeNotes
+            = "")
 #endif
         {
             // dynamic slows things down, but it saves coding time
@@ -45,18 +55,28 @@ namespace Phoenix.WorkshopTool
                 return false;
 #endif
 
-            var steamService = MySteamWorkshopItemPublisherType.GetField("m_steamService", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(thisobj);
-            var steamUGC = MySteamWorkshopItemPublisherType.GetProperty("SteamUGC", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(thisobj);
-            var appid = (AppId_t)steamService.GetType().GetField("SteamAppId", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(steamService);
-            UGCUpdateHandle_t ugcUpdateHandleT = SteamUGC.StartItemUpdate(appid, (PublishedFileId_t)thisobj.Id);
+            var steamService = MySteamWorkshopItemPublisherType.GetField("m_steamService",
+                BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(thisobj);
+            var steamUGC = MySteamWorkshopItemPublisherType.GetProperty("SteamUGC",
+                BindingFlags.NonPublic | BindingFlags.Instance).GetValue(thisobj);
+            var appid = (AppId_t) steamService.GetType().GetField("SteamAppId",
+                    BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.GetValue(steamService);
+            var ugcUpdateHandleT = SteamUGC.StartItemUpdate(appid, (PublishedFileId_t) thisobj.Id);
 
             if (!string.IsNullOrEmpty(thisobj.Title))
-                SteamUGC.SetItemTitle(ugcUpdateHandleT, string.IsNullOrWhiteSpace(thisobj.Title) ? string.Format("Item {0}", (object)thisobj.Id) : thisobj.Title);
+                SteamUGC.SetItemTitle(ugcUpdateHandleT,
+                    string.IsNullOrWhiteSpace(thisobj.Title)
+                        ? string.Format("Item {0}", (object) thisobj.Id)
+                        : thisobj.Title);
 
             if (thisobj.Tags != null)
-                SteamUGC.SetItemTags(ugcUpdateHandleT, (IList<string>)thisobj.Tags);
+                SteamUGC.SetItemTags(ugcUpdateHandleT, (IList<string>) thisobj.Tags);
 
-            SteamUGC.SetItemVisibility(ugcUpdateHandleT, (ERemoteStoragePublishedFileVisibility)MySteamHelperType.GetMethod("ToSteam", BindingFlags.Public | BindingFlags.Static).Invoke(null, new[] { thisobj.Visibility }));
+            SteamUGC.SetItemVisibility(ugcUpdateHandleT,
+                (ERemoteStoragePublishedFileVisibility) MySteamHelperType
+                    .GetMethod("ToSteam", BindingFlags.Public | BindingFlags.Static)
+                    .Invoke(null, new[] {thisobj.Visibility}));
 
             if (!string.IsNullOrWhiteSpace(thisobj.Description))
                 SteamUGC.SetItemDescription(ugcUpdateHandleT, thisobj.Description);
@@ -65,13 +85,19 @@ namespace Phoenix.WorkshopTool
             if (!string.IsNullOrWhiteSpace(thisobj.Thumbnail))
                 SteamUGC.SetItemPreview(ugcUpdateHandleT, thisobj.Thumbnail);
             if (thisobj.Metadata != null)
-                SteamUGC.SetItemMetadata(ugcUpdateHandleT, MyModMetadataLoader.Serialize((ModMetadataFile)thisobj.Metadata));
+                SteamUGC.SetItemMetadata(ugcUpdateHandleT,
+                    MyModMetadataLoader.Serialize((ModMetadataFile) thisobj.Metadata));
 
-            dynamic submitItemUpdateResult = MySteamWorkshopItemPublisherType.GetField("m_submitItemUpdateResult", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(thisobj);
-            var SubmitItemUpdateResult = MySteamWorkshopItemPublisherType.GetMethod("SubmitItemUpdateResult", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            
-            var SubmitItemUpdateResultMethod = (SubmitItemUpdateResult)Delegate.CreateDelegate(typeof(SubmitItemUpdateResult), thisobj, SubmitItemUpdateResult);
-            submitItemUpdateResult.Set(SteamUGC.SubmitItemUpdate(ugcUpdateHandleT, ChangeLog), new CallResult<SubmitItemUpdateResult_t>.APIDispatchDelegate(SubmitItemUpdateResultMethod));
+            var submitItemUpdateResult = MySteamWorkshopItemPublisherType.GetField("m_submitItemUpdateResult",
+                BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(thisobj);
+            var SubmitItemUpdateResult = MySteamWorkshopItemPublisherType.GetMethod("SubmitItemUpdateResult",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            var SubmitItemUpdateResultMethod =
+                (SubmitItemUpdateResult) Delegate.CreateDelegate(typeof(SubmitItemUpdateResult), thisobj,
+                    SubmitItemUpdateResult);
+            submitItemUpdateResult.Set(SteamUGC.SubmitItemUpdate(ugcUpdateHandleT, ChangeLog),
+                new CallResult<SubmitItemUpdateResult_t>.APIDispatchDelegate(SubmitItemUpdateResultMethod));
 
 #if !SE
             return true;
@@ -97,30 +123,33 @@ namespace Phoenix.WorkshopTool
                 if (MySteam.FileExists(steamFileName))
                 {
                     var size = MySteam.GetFileSize(steamFileName);
-                    MySandboxGame.Log.WriteLine(string.Format("File already exists '{0}', size: {1}", steamFileName, size));
+                    MySandboxGame.Log.WriteLine(string.Format("File already exists '{0}', size: {1}", steamFileName,
+                        size));
                 }
-                ulong handle = MySteam.FileWriteStreamOpen(steamFileName);
-                byte[] buffer = new byte[m_bufferSize];
-                int bytesRead = 0;
+
+                var handle = MySteam.FileWriteStreamOpen(steamFileName);
+                var buffer = new byte[m_bufferSize];
+                var bytesRead = 0;
                 while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
                     MySteam.FileWriteStreamWriteChunk(handle, buffer, bytesRead);
                 MySteam.FileWriteStreamClose(handle);
             }
 
 
-            bool fileShareSuccess = false;
+            var fileShareSuccess = false;
 
-            MyGameServiceCallResult result = MyGameServiceCallResult.Fail;
+            var result = MyGameServiceCallResult.Fail;
             using (var mrEvent = new ManualResetEvent(false))
             {
-                MySteam.FileShare(steamFileName, delegate (bool ioFailure, MyRemoteStorageFileShareResult data)
+                MySteam.FileShare(steamFileName, delegate(bool ioFailure, MyRemoteStorageFileShareResult data)
                 {
                     fileShareSuccess = !ioFailure && data.Result == MyGameServiceCallResult.OK;
                     result = data.Result;
                     if (fileShareSuccess)
                         MySandboxGame.Log.WriteLine(string.Format("File shared"));
                     else
-                        MySandboxGame.Log.WriteLine(string.Format("Error sharing the file: {0}", GetErrorString(ioFailure, data.Result)));
+                        MySandboxGame.Log.WriteLine(string.Format("Error sharing the file: {0}",
+                            GetErrorString(ioFailure, data.Result)));
                     mrEvent.Set();
                 });
                 mrEvent.WaitOne();
@@ -143,7 +172,8 @@ namespace Phoenix.WorkshopTool
             return ioFailure ? "IO Failure" : result.ToString();
         }
 
-        public static ulong UpdateModThumbnailTags(ulong? workshopId, string thumbnailFilename = null, string[] tags = null)
+        public static ulong UpdateModThumbnailTags(ulong? workshopId, string thumbnailFilename = null,
+            string[] tags = null)
         {
 #if SE
             var localPreviewFileFullPath = thumbnailFilename;
@@ -161,7 +191,8 @@ namespace Phoenix.WorkshopTool
 
                 if (steamPreviewFileName == null)
                 {
-                    MySandboxGame.Log.WriteLine(string.Format("Could not share preview file = '{0}'", localPreviewFileFullPath));
+                    MySandboxGame.Log.WriteLine(string.Format("Could not share preview file = '{0}'",
+                        localPreviewFileFullPath));
                     return 0;
                 }
             }
@@ -170,30 +201,33 @@ namespace Phoenix.WorkshopTool
             using (var mrEvent = new ManualResetEvent(false))
             {
                 // Update item if it has already been published, otherwise publish it.
-                bool publishedFileNotFound = true;
+                var publishedFileNotFound = true;
                 if (workshopId.HasValue && workshopId != 0)
                 {
-                    MySandboxGame.Log.WriteLine("File appears to be published already. Attempting to update workshop file.");
-                    ulong updateHandle = MySteam.CreatePublishedFileUpdateRequest(workshopId.Value);
+                    MySandboxGame.Log.WriteLine(
+                        "File appears to be published already. Attempting to update workshop file.");
+                    var updateHandle = MySteam.CreatePublishedFileUpdateRequest(workshopId.Value);
 
-                    if(thumbnailFilename != null)
+                    if (thumbnailFilename != null)
                         MySteam.UpdatePublishedFilePreviewFile(updateHandle, steamPreviewFileName);
 
                     if (tags != null)
                         MySteam.UpdatePublishedFileTags(updateHandle, tags);
 
-                    MySteam.CommitPublishedFileUpdate(updateHandle, delegate (bool ioFailure, MyRemoteStorageUpdatePublishedFileResult data)
-                    {
-                        publishResult = data.Result;
-                        bool success = !ioFailure && data.Result == MyGameServiceCallResult.OK;
-                        if (success)
-                            MySandboxGame.Log.WriteLine("Published file update successful");
-                        else
-                            MySandboxGame.Log.WriteLine(string.Format("Error during publishing: {0}", GetErrorString(ioFailure, data.Result)));
-                        publishedFileId = data.PublishedFileId;
-                        publishedFileNotFound = data.Result == MyGameServiceCallResult.FileNotFound;
-                        mrEvent.Set();
-                    });
+                    MySteam.CommitPublishedFileUpdate(updateHandle,
+                        delegate(bool ioFailure, MyRemoteStorageUpdatePublishedFileResult data)
+                        {
+                            publishResult = data.Result;
+                            var success = !ioFailure && data.Result == MyGameServiceCallResult.OK;
+                            if (success)
+                                MySandboxGame.Log.WriteLine("Published file update successful");
+                            else
+                                MySandboxGame.Log.WriteLine(string.Format("Error during publishing: {0}",
+                                    GetErrorString(ioFailure, data.Result)));
+                            publishedFileId = data.PublishedFileId;
+                            publishedFileNotFound = data.Result == MyGameServiceCallResult.FileNotFound;
+                            mrEvent.Set();
+                        });
                     mrEvent.WaitOne();
                     mrEvent.Reset();
                 }
@@ -203,7 +237,7 @@ namespace Phoenix.WorkshopTool
 
             // Erasing temporary file. No need for it to take up cloud storage anymore.
             MySandboxGame.Log.WriteLine("Deleting cloud files - START");
-            if(steamPreviewFileName != null)
+            if (steamPreviewFileName != null)
                 MySteam.FileDelete(steamPreviewFileName);
             MySandboxGame.Log.WriteLine("Deleting cloud files - END");
 #endif
@@ -218,21 +252,25 @@ namespace Phoenix.WorkshopTool
 #if SE
         // Vanilla method fails to URLEncode the ticket data, triggering error 422
         private static /*MyModIo.MyRequestSetup*/ object CreateRequest(
-          string function,
-          HttpMethod method,
-          string contentType,
-          params string[] p)
+            string function,
+            HttpMethod method,
+            string contentType,
+            params string[] p)
         {
-            var clsMyModIo = typeof(VRage.Mod.Io.MyModIoService).Assembly.GetType("VRage.Mod.Io.MyModIo");
-            var clsMyRequestSetup = clsMyModIo?.GetNestedType("MyRequestSetup", System.Reflection.BindingFlags.NonPublic);
+            var clsMyModIo = typeof(MyModIoService).Assembly.GetType("VRage.Mod.Io.MyModIo");
+            var clsMyRequestSetup =
+                clsMyModIo?.GetNestedType("MyRequestSetup", BindingFlags.NonPublic);
 
             if (clsMyRequestSetup != null)
             {
-                var mtdGetUrl = clsMyModIo.GetMethod("GetUrl", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                var mtdAddAuthorizationHeader = clsMyModIo.GetMethod("AddAuthorizationHeader", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                var mtdGetUrl = clsMyModIo.GetMethod("GetUrl",
+                    BindingFlags.NonPublic | BindingFlags.Static);
+                var mtdAddAuthorizationHeader = clsMyModIo.GetMethod("AddAuthorizationHeader",
+                    BindingFlags.NonPublic | BindingFlags.Static);
 
                 var request = Activator.CreateInstance(clsMyRequestSetup, true);
-                var parameters = request.GetType().GetField("Parameters", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                var parameters = request.GetType().GetField("Parameters",
+                    BindingFlags.Instance | BindingFlags.Public);
                 parameters.SetValue(request, new List<HttpData>()
                 {
                     new HttpData("Accept", (object) "application/json", HttpDataType.HttpHeader)
@@ -244,24 +282,26 @@ namespace Phoenix.WorkshopTool
                     var httpparams = parameters.GetValue(request) as List<HttpData>;
                     for (var idx = 0; idx < p.Length; idx++)
                     {
-                        var param = p[idx].Split(new[] { '=' }, 2);
-                        param[1] = System.Net.WebUtility.UrlEncode(param[1]);
+                        var param = p[idx].Split(new[] {'='}, 2);
+                        param[1] = WebUtility.UrlEncode(param[1]);
                         p[idx] = string.Join("=", param[0], param[1]);
 
                         httpparams.Add(new HttpData(param[0], param[1], HttpDataType.RequestBody));
                     }
                 }
 
-                request.GetType().GetField("Url", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
-                    .SetValue(request, (string)mtdGetUrl.Invoke(null, new object[] { function, p }));
-                request.GetType().GetField("Method", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+                request.GetType().GetField("Url",
+                        BindingFlags.Instance | BindingFlags.Public)
+                    .SetValue(request, (string) mtdGetUrl.Invoke(null, new object[] {function, p}));
+                request.GetType().GetField("Method",
+                        BindingFlags.Instance | BindingFlags.Public)
                     .SetValue(request, method);
 
                 if (contentType != null)
                     (parameters.GetValue(request) as List<HttpData>)
-                        .Add(new HttpData("Content-Type", (object)contentType, HttpDataType.HttpHeader));
+                        .Add(new HttpData("Content-Type", (object) contentType, HttpDataType.HttpHeader));
 
-                mtdAddAuthorizationHeader.Invoke(null, new[] { request });
+                mtdAddAuthorizationHeader.Invoke(null, new[] {request});
                 return request;
             }
 

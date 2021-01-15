@@ -1,36 +1,45 @@
-﻿using Sandbox;
-using Sandbox.Engine.Networking;
-using Sandbox.Engine.Utils;
-using System;
-using System.Reflection;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using Steamworks;
-using VRageRender;
-using VRage.FileSystem;
-using VRage.Utils;
-using VRage.GameServices;
-using System.Diagnostics;
-using VRage;
-#if SE
-using ParallelTasks;
+﻿#if SE
+using EmptyKeys.UserInterface;
+using VRage.Mod.Io;
+using VRage.UserInterface;
 #else
 using VRage.Library.Threading;
+using VRage.Logging;
+using VRage.Utils;
 #endif
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using CommandLine;
+using CommandLine.Text;
+using Sandbox;
+using Sandbox.Engine.Networking;
+using Sandbox.Engine.Platform;
+using Sandbox.Engine.Utils;
+using Sandbox.Game;
+using Steamworks;
+using VRage;
+using VRage.FileSystem;
+using VRage.GameServices;
+using VRageRender;
 
 namespace Phoenix.WorkshopTool
 {
-    abstract class GameBase
+    public abstract class GameBase
     {
         protected static readonly string LaunchDirectory = Environment.CurrentDirectory;
-        protected MySandboxGame m_game = null;
-        protected MyCommonProgramStartup m_startup;
-        protected IMyGameService m_steamService;
         protected static readonly uint AppId = 244850;
         protected static readonly string AppName = "SEWT";
         protected static readonly bool IsME = false;
         protected string[] m_args;
+        protected MySandboxGame m_game = null;
+        protected MyCommonProgramStartup m_startup;
+        protected IMyGameService m_steamService;
         protected bool m_useModIO = false;
 
         static GameBase()
@@ -55,62 +64,21 @@ namespace Phoenix.WorkshopTool
             MyFileSystem.ExePath = new FileInfo(Assembly.GetAssembly(typeof(FastResourceLock)).Location).DirectoryName;
         }
 
-        public GameBase()
+        protected GameBase()
         {
-            ReplaceMethod(typeof(SteamAPI), nameof(SteamAPI.RestartAppIfNecessary), BindingFlags.Static | BindingFlags.Public, typeof(InjectedMethod), nameof(InjectedMethod.RestartAppIfNecessary), BindingFlags.Static | BindingFlags.Public);
+            ReplaceMethod(typeof(SteamAPI), nameof(SteamAPI.RestartAppIfNecessary),
+                BindingFlags.Static | BindingFlags.Public, typeof(InjectedMethod),
+                nameof(InjectedMethod.RestartAppIfNecessary), BindingFlags.Static | BindingFlags.Public);
 
-            Type[] copyAllBaseTypes = { typeof(string), typeof(string) };
-            ReplaceMethod(typeof(VRage.FileSystem.MyFileSystem), nameof(VRage.FileSystem.MyFileSystem.CopyAll), BindingFlags.Static | BindingFlags.Public, typeof(GameBase), nameof(GameBase.CopyAll), types: copyAllBaseTypes);
+            Type[] copyAllBaseTypes = {typeof(string), typeof(string)};
+            ReplaceMethod(typeof(MyFileSystem), nameof(MyFileSystem.CopyAll),
+                BindingFlags.Static | BindingFlags.Public, typeof(GameBase), nameof(CopyAll),
+                types: copyAllBaseTypes);
 
-            Type[] copyAllConditionalTypes = { typeof(string), typeof(string), typeof(Predicate<string>) };
-            ReplaceMethod(typeof(VRage.FileSystem.MyFileSystem), nameof(VRage.FileSystem.MyFileSystem.CopyAll), BindingFlags.Static | BindingFlags.Public, typeof(GameBase), nameof(GameBase.CopyAllConditional), types: copyAllConditionalTypes);
-        }
-
-        // Event handler for loading assemblies not in the same directory as the exe.
-        // This assumes the current directory contains the assemblies.
-        public static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            return Assembly.LoadFrom(AssemblyResolver(sender, args, ".dll"));
-        }
-
-        public static Assembly CurrentDomain_ReflectionOnlyAssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            return Assembly.ReflectionOnlyLoadFrom(AssemblyResolver(sender, args, ".exe"));
-        }
-
-        private static string AssemblyResolver(object sender, ResolveEventArgs args, string ext)
-        {
-            var assemblyname = new AssemblyName(args.Name).Name;
-            var assemblyPath = ResolveFromRoot(assemblyname, ext, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
-            if (!File.Exists(assemblyPath))
-                assemblyPath = ResolveFromRoot(assemblyname, ext, Environment.CurrentDirectory);
-
-            return assemblyPath;
-        }
-
-        private static string ResolveFromRoot(string assemblyname, string ext, string root)
-        {
-            var assemblyPath = Path.Combine(root, assemblyname + ext);
-
-            if (!File.Exists(assemblyPath))
-                assemblyPath = Path.Combine(root, "Bin64", assemblyname + ext);
-
-            if (!File.Exists(assemblyPath))
-                assemblyPath = Path.Combine(root, "Bin64", "x64", assemblyname + ext);
-
-            var sublength = assemblyname.LastIndexOf('.');
-
-            if (sublength == -1)
-                sublength = assemblyname.Length;
-
-            if (!File.Exists(assemblyPath))
-                assemblyPath = Path.Combine(root, assemblyname.Substring(0, sublength) + ext);
-
-            if (!File.Exists(assemblyPath))
-                assemblyPath = Path.Combine(root, "Bin64", assemblyname.Substring(0, sublength) + ext);
-
-            return assemblyPath;
+            Type[] copyAllConditionalTypes = {typeof(string), typeof(string), typeof(Predicate<string>)};
+            ReplaceMethod(typeof(MyFileSystem), nameof(MyFileSystem.CopyAll),
+                BindingFlags.Static | BindingFlags.Public, typeof(GameBase), nameof(CopyAllConditional),
+                types: copyAllConditionalTypes);
         }
 
         private void HandleInputError()
@@ -126,7 +94,7 @@ namespace Phoenix.WorkshopTool
         public virtual int InitGame(string[] args)
         {
             var options = new Options();
-            var parser = new CommandLine.Parser(with => with.HelpWriter = Console.Error);
+            var parser = new Parser(with => with.HelpWriter = Console.Error);
 
             if (parser.ParseArgumentsStrict(args, options, HandleInputError))
             {
@@ -141,18 +109,19 @@ namespace Phoenix.WorkshopTool
                 {
                     if (!options.ClearSteamCloud && !options.ListDLCs)
                     {
-                        Console.WriteLine(CommandLine.Text.HelpText.AutoBuild(options).ToString());
+                        Console.WriteLine(HelpText.AutoBuild(options).ToString());
                         return Cleanup(1);
                     }
                 }
-                
+
                 // If a "0" or "none" was specified for DLC, that means remove them all.
-                if(options.DLCs?.Length > 0 && 
-                    (options.DLCs.Contains("0") || options.DLCs.Contains("none", StringComparer.InvariantCultureIgnoreCase)))
+                if (options.DLCs?.Length > 0 &&
+                    (options.DLCs.Contains("0") ||
+                     options.DLCs.Contains("none", StringComparer.InvariantCultureIgnoreCase)))
                     options.DLCs = new string[0];
 
                 // If a 0 was specified for dependencies, that means remove them all.
-                if (options.Dependencies?.Length > 0 && options.Dependencies.Contains((ulong)0))
+                if (options.Dependencies?.Length > 0 && options.Dependencies.Contains((ulong) 0))
                     options.Dependencies = new ulong[0];
 
                 // SE requires -appdata, but the commandline dll requires --appdata, so fix it
@@ -174,7 +143,8 @@ namespace Phoenix.WorkshopTool
 
                 if (!SteamAPI.IsSteamRunning())
                 {
-                    MySandboxGame.Log.WriteLineAndConsole("ERROR: * Steam not detected. Is Steam running and not as Admin? *");
+                    MySandboxGame.Log.WriteLineAndConsole(
+                        "ERROR: * Steam not detected. Is Steam running and not as Admin? *");
                     MySandboxGame.Log.WriteLineAndConsole("* Only compile testing is available. *");
                     MySandboxGame.Log.WriteLineAndConsole("");
 
@@ -200,7 +170,8 @@ namespace Phoenix.WorkshopTool
                 if (options.Compile)
                 {
                     // Init ModAPI
-                    var initmethod = typeof(MySandboxGame).GetMethod("InitModAPI", BindingFlags.Instance | BindingFlags.NonPublic);
+                    var initmethod =
+                        typeof(MySandboxGame).GetMethod("InitModAPI", BindingFlags.Instance | BindingFlags.NonPublic);
                     MyDebug.AssertRelease(initmethod != null);
 
                     if (initmethod != null)
@@ -208,7 +179,7 @@ namespace Phoenix.WorkshopTool
                         parameters = initmethod.GetParameters();
                         MyDebug.AssertRelease(parameters.Count() == 0);
 
-                        if(!(parameters.Count() == 0))
+                        if (!(parameters.Count() == 0))
                             initmethod = null;
                     }
 
@@ -220,14 +191,18 @@ namespace Phoenix.WorkshopTool
 #endif
                 ReplaceMethods();
 
-                System.Threading.Tasks.Task<bool> Task;
+                Task<bool> Task;
 
                 if (options.Download)
                     Task = DownloadMods(options);
                 else if (options.ClearSteamCloud)
                     Task = ClearSteamCloud(options.DeleteSteamCloudFiles, options.Force);
                 else if (options.ListDLCs)
-                    Task = System.Threading.Tasks.Task<bool>.Factory.StartNew(()=> { ListDLCs(); return true; });
+                    Task = Task<bool>.Factory.StartNew(() =>
+                    {
+                        ListDLCs();
+                        return true;
+                    });
                 else
                     Task = UploadMods(options);
 
@@ -239,14 +214,14 @@ namespace Phoenix.WorkshopTool
                         MyGameService.Update();
                     }
                 }
-                catch(AggregateException ex)
+                catch (AggregateException ex)
                 {
                     MyDebug.AssertRelease(Task.IsFaulted);
                     MyDebug.AssertRelease(ex.InnerException != null);
                     ex.InnerException.Log();
                     return Cleanup(4);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     ex.Log();
                     return Cleanup(5);
@@ -260,27 +235,36 @@ namespace Phoenix.WorkshopTool
             return Cleanup();
         }
 
-        void ReplaceMethods()
+        private void ReplaceMethods()
         {
 #if SE
-            ReplaceMethod(InjectedMethod.MySteamWorkshopItemPublisherType, "UpdatePublishedItem", BindingFlags.Instance | BindingFlags.NonPublic, typeof(InjectedMethod), "UpdatePublishedItem", BindingFlags.Instance | BindingFlags.NonPublic);
-            ReplaceMethod(InjectedMethod.MySteamHelperType, "ToService", BindingFlags.Static | BindingFlags.Public, typeof(MySteamHelper), nameof(MySteamHelper.ToService));
-            ReplaceMethod(InjectedMethod.MySteamHelperType, "ToSteam", BindingFlags.Static | BindingFlags.Public, typeof(MySteamHelper), nameof(MySteamHelper.ToSteam));
-            ReplaceMethod(typeof(VRage.Mod.Io.MyModIoService).Assembly.GetType("VRage.Mod.Io.MyModIo"), "CreateRequest", BindingFlags.Static | BindingFlags.NonPublic, typeof(InjectedMethod), "CreateRequest", BindingFlags.Static | BindingFlags.NonPublic);
+            ReplaceMethod(InjectedMethod.MySteamWorkshopItemPublisherType, "UpdatePublishedItem",
+                BindingFlags.Instance | BindingFlags.NonPublic, typeof(InjectedMethod), "UpdatePublishedItem",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            ReplaceMethod(InjectedMethod.MySteamHelperType, "ToService", BindingFlags.Static | BindingFlags.Public,
+                typeof(MySteamHelper), nameof(MySteamHelper.ToService));
+            ReplaceMethod(InjectedMethod.MySteamHelperType, "ToSteam", BindingFlags.Static | BindingFlags.Public,
+                typeof(MySteamHelper), nameof(MySteamHelper.ToSteam));
+            ReplaceMethod(typeof(MyModIoService).Assembly.GetType("VRage.Mod.Io.MyModIo"), "CreateRequest",
+                BindingFlags.Static | BindingFlags.NonPublic, typeof(InjectedMethod), "CreateRequest",
+                BindingFlags.Static | BindingFlags.NonPublic);
 
 #else
-            ReplaceMethod(InjectedMethod.MySteamWorkshopItemPublisherType, "UpdatePublishedItem", BindingFlags.Instance | BindingFlags.Public, typeof(InjectedMethod), "UpdatePublishedItem");
+            ReplaceMethod(InjectedMethod.MySteamWorkshopItemPublisherType, "UpdatePublishedItem",
+                BindingFlags.Instance | BindingFlags.Public, typeof(InjectedMethod), "UpdatePublishedItem");
 #endif
         }
 
         /// <summary>
-        /// Replaces a method with another one
+        ///     Replaces a method with another one
         /// </summary>
         /// <param name="sourceType">Original type</param>
         /// <param name="sourceMethod">Original method name</param>
         /// <param name="destinationType">New type</param>
         /// <param name="destinationMethod">New method name</param>
-        void ReplaceMethod(Type sourceType, string sourceMethod, BindingFlags sourceBinding, Type destinationType, string destinationMethod, BindingFlags? destinationBinding = null, Type[] types = null)
+        private void ReplaceMethod(Type sourceType, string sourceMethod, BindingFlags sourceBinding,
+            Type destinationType,
+            string destinationMethod, BindingFlags? destinationBinding = null, Type[] types = null)
         {
             ParameterInfo[] sourceParameters;
             ParameterInfo[] destinationParameters;
@@ -297,7 +281,7 @@ namespace Phoenix.WorkshopTool
                 sourceParameters = methodtoreplace.GetParameters();
                 destinationParameters = methodtoinject.GetParameters();
                 MyDebug.AssertDebug(sourceParameters.Length == destinationParameters.Length);
-                bool valid = true;
+                var valid = true;
 
                 // Verify signatures
                 for (var x = 0; x < Math.Min(destinationParameters.Length, sourceParameters.Length); x++)
@@ -327,7 +311,154 @@ namespace Phoenix.WorkshopTool
             return errorCode;
         }
 
-#region Sandbox stuff
+        #region Steam
+
+        private Task<bool> ClearSteamCloud(string[] filesToDelete, bool force = false)
+        {
+            var Task = Task<bool>.Factory.StartNew(() =>
+            {
+#if SE
+                ulong totalBytes = 0;
+                ulong availableBytes = 0;
+
+                MyGameService.GetRemoteStorageQuota(out totalBytes, out availableBytes);
+                MySandboxGame.Log.WriteLineAndConsole(string.Format("Quota: total = {0}, available = {1}", totalBytes,
+                    availableBytes));
+
+                var totalCloudFiles = MyGameService.GetRemoteStorageFileCount();
+
+                MySandboxGame.Log.WriteLineAndConsole(string.Format("Listing cloud {0} files", totalCloudFiles));
+                MySandboxGame.Log.IncreaseIndent();
+                for (var i = 0; i < totalCloudFiles; ++i)
+                {
+                    var fileSize = 0;
+                    var fileName = MyGameService.GetRemoteStorageFileNameAndSize(i, out fileSize);
+                    var persisted = MyGameService.IsRemoteStorageFilePersisted(fileName);
+                    var forgot = false;
+
+                    // Here's how the if works: 
+                    // Delete if --force AND no files were manually specified
+                    // OR if the file specified matches the file on the cloud
+                    if (force && filesToDelete == null ||
+                        persisted && fileName.StartsWith("tmp") && fileName.EndsWith(".tmp") ||
+                        filesToDelete?.Length > 0 &&
+                        filesToDelete.Contains(fileName, StringComparer.CurrentCultureIgnoreCase)
+                    ) // dont sync useless temp files
+                    {
+                        forgot = MyGameService.RemoteStorageFileForget(fileName);
+
+                        // force actually deletes the file on local disk, don't do that unless --force specified
+                        if (force)
+                        {
+                            forgot = MyGameService.DeleteFromCloud(fileName);
+                            // Delete is immediate, and alters the count, so adjust for that
+                            totalCloudFiles--;
+                            i--;
+                        }
+                    }
+
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("'{0}', {1}B, {2}, {3}", fileName, fileSize,
+                        persisted, forgot));
+                }
+
+                MySandboxGame.Log.DecreaseIndent();
+
+                MyGameService.GetRemoteStorageQuota(out totalBytes, out availableBytes);
+                MySandboxGame.Log.WriteLineAndConsole(string.Format("Quota: total = {0}, available = {1}", totalBytes,
+                    availableBytes));
+
+#endif
+                return true;
+            });
+            return Task;
+        }
+
+        #endregion
+
+        protected virtual void AuthenticateWorkshop()
+        {
+        }
+
+        private void ListDLCs()
+        {
+#if SE
+            MySandboxGame.Log.WriteLineAndConsole("Valid DLC:");
+            foreach (var dlc in MyDLCs.DLCs.Values)
+            {
+                MySandboxGame.Log.WriteLineAndConsole($"Name: {dlc.Name}, ID: {dlc.AppId}");
+            }
+#endif
+        }
+
+        private static string[] CombineCollectionWithList(WorkshopType type, List<MyWorkshopItem> items,
+            string[] existingitems)
+        {
+            var tempList = new List<string>();
+
+            // Check mods
+            items.Where(i => i.Tags.Contains(type.ToString(), StringComparer.InvariantCultureIgnoreCase))
+                .ForEach(i => tempList.Add(
+                    i.Id.ToString()
+                ));
+
+            if (tempList.Count > 0)
+            {
+                if (existingitems != null)
+                    tempList = tempList.Union(existingitems).ToList();
+
+                return tempList.ToArray();
+            }
+
+            return existingitems;
+        }
+
+        public static void CopyAll(string source, string target)
+        {
+            CopyAllConditional(source, target, (string s) => true);
+        }
+
+        public static void CopyAllConditional(string source, string target, Predicate<string> condition)
+        {
+            if (!Directory.Exists(target))
+                Directory.CreateDirectory(target);
+
+            foreach (var file in Directory.EnumerateFiles(source, "*.*", SearchOption.AllDirectories))
+            {
+                if (condition(file))
+                {
+                    var fileName = Path.GetFileName(file);
+                    var fileDirectory = Path.GetDirectoryName(file);
+                    var relativePath = GetRelativePath(source, fileDirectory);
+                    if (!string.IsNullOrWhiteSpace(relativePath))
+                    {
+                        Directory.CreateDirectory(Path.Combine(target, relativePath));
+                        File.Copy(file, Path.Combine(target, relativePath, fileName), true);
+                    }
+                    else
+                    {
+                        File.Copy(file, Path.Combine(target, fileName), true);
+                    }
+                }
+            }
+        }
+
+        private static string GetRelativePath(string relative_to, string path)
+        {
+            if (relative_to.EndsWith("\\"))
+                relative_to = relative_to.Remove(relative_to.Length - 1);
+
+            if (relative_to.Equals(path, StringComparison.InvariantCultureIgnoreCase))
+                return string.Empty;
+
+            var relativePath = path.Remove(0, relative_to.Length);
+            if (relativePath.StartsWith("\\"))
+                relativePath = relativePath.Remove(0, 1);
+
+            return relativePath;
+        }
+
+        #region Sandbox stuff
+
         private void CleanupSandbox()
         {
             try
@@ -337,14 +468,14 @@ namespace Phoenix.WorkshopTool
                 m_steamService = null;
                 m_game = null;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 // Don't spam console with annoying cleanup error
                 MySandboxGame.Log.WriteLine(ex.Message);
                 MySandboxGame.Log.WriteLine(ex.StackTrace);
             }
 #if !SE
-            VRage.Logging.MyLog.Default.Dispose();
+            MyLog.Default.Dispose();
 #endif
         }
 
@@ -360,7 +491,7 @@ namespace Phoenix.WorkshopTool
 
             if (infinario != null)
                 infinario.SetValue(null, false);
-            
+
             if (m_game != null)
                 m_game.Exit();
 
@@ -371,12 +502,12 @@ namespace Phoenix.WorkshopTool
             var render = new MyNullRender();
             MyRenderProxy.Initialize(render);
 #if SE
-            EmptyKeys.UserInterface.Engine engine = (EmptyKeys.UserInterface.Engine)new VRage.UserInterface.MyEngine();
+            var engine = (Engine) new MyEngine();
 
-            if (System.Diagnostics.Debugger.IsAttached)
-                m_startup.CheckSteamRunning();        // Just give the warning message box when debugging, ignore for release
+            if (Debugger.IsAttached)
+                m_startup.CheckSteamRunning(); // Just give the warning message box when debugging, ignore for release
 
-            if (!Sandbox.Engine.Platform.Game.IsDedicated)
+            if (!Game.IsDedicated)
                 MyFileSystem.InitUserSpecific(m_steamService.UserId.ToString());
 #endif
 
@@ -390,19 +521,21 @@ namespace Phoenix.WorkshopTool
                 m_game = InitGame();
 
                 // Initializing the workshop means the categories are available
-                var initWorkshopMethod = m_game.GetType().GetMethod("InitSteamWorkshop", BindingFlags.NonPublic | BindingFlags.Instance);
+                var initWorkshopMethod = m_game.GetType()
+                    .GetMethod("InitSteamWorkshop", BindingFlags.NonPublic | BindingFlags.Instance);
                 MyDebug.AssertRelease(initWorkshopMethod != null);
 
                 if (initWorkshopMethod != null)
                 {
                     var parameters = initWorkshopMethod.GetParameters();
-                    MyDebug.AssertRelease(parameters.Count() == 0);
+                    MyDebug.AssertRelease(!parameters.Any());
                 }
 
                 if (initWorkshopMethod != null)
                     initWorkshopMethod.Invoke(m_game, null);
                 else
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format(Constants.ERROR_Reflection, "InitSteamWorkshop"));
+                    MySandboxGame.Log.WriteLineAndConsole(
+                        string.Format(Constants.ERROR_Reflection, "InitSteamWorkshop"));
             }
             catch (Exception ex)
             {
@@ -412,71 +545,18 @@ namespace Phoenix.WorkshopTool
 
             AuthenticateWorkshop();
         }
-#endregion
 
-#region Steam
-        private System.Threading.Tasks.Task<bool> ClearSteamCloud(string [] filesToDelete, bool force = false)
-        {
-            var Task = System.Threading.Tasks.Task<bool>.Factory.StartNew(() =>
-            {
-#if SE
-                ulong totalBytes = 0;
-                ulong availableBytes = 0;
+        #endregion
 
-                MyGameService.GetRemoteStorageQuota(out totalBytes, out availableBytes);
-                MySandboxGame.Log.WriteLineAndConsole(string.Format("Quota: total = {0}, available = {1}", totalBytes, availableBytes));
+        #region Upload
 
-                int totalCloudFiles = MyGameService.GetRemoteStorageFileCount();
-
-                MySandboxGame.Log.WriteLineAndConsole(string.Format("Listing cloud {0} files", totalCloudFiles));
-                MySandboxGame.Log.IncreaseIndent();
-                for (int i = 0; i < totalCloudFiles; ++i)
-                {
-                    int fileSize = 0;
-                    string fileName = MyGameService.GetRemoteStorageFileNameAndSize(i, out fileSize);
-                    bool persisted = MyGameService.IsRemoteStorageFilePersisted(fileName);
-                    bool forgot = false;
-
-                    // Here's how the if works: 
-                    // Delete if --force AND no files were manually specified
-                    // OR if the file specified matches the file on the cloud
-                    if ((force && filesToDelete == null) || (persisted && fileName.StartsWith("tmp") && fileName.EndsWith(".tmp")) ||
-                        (filesToDelete?.Length > 0 && filesToDelete.Contains(fileName, StringComparer.CurrentCultureIgnoreCase))) // dont sync useless temp files
-                    {
-                        forgot = MyGameService.RemoteStorageFileForget(fileName);
-
-                        // force actually deletes the file on local disk, don't do that unless --force specified
-                        if (force)
-                        {
-                            forgot = MyGameService.DeleteFromCloud(fileName);
-                            // Delete is immediate, and alters the count, so adjust for that
-                            totalCloudFiles--;
-                            i--;
-                        }
-                    }
-
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("'{0}', {1}B, {2}, {3}", fileName, fileSize, persisted, forgot));
-                }
-                MySandboxGame.Log.DecreaseIndent();
-
-                MyGameService.GetRemoteStorageQuota(out totalBytes, out availableBytes);
-                MySandboxGame.Log.WriteLineAndConsole(string.Format("Quota: total = {0}, available = {1}", totalBytes, availableBytes));
-
-#endif
-                return true;
-            });
-            return Task;
-        }
-#endregion
-
-#region Upload
-        static System.Threading.Tasks.Task<bool> UploadMods(Options options)
+        private static Task<bool> UploadMods(Options options)
         {
             MySandboxGame.Log.WriteLineAndConsole(string.Empty);
 
-            var Task = System.Threading.Tasks.Task<bool>.Factory.StartNew(() =>
+            var task = Task<bool>.Factory.StartNew(() =>
             {
-                bool success = true;
+                var success = true;
                 MySandboxGame.Log.WriteLineAndConsole("Beginning batch workshop upload...");
                 MySandboxGame.Log.WriteLineAndConsole(string.Empty);
                 List<string> itemPaths;
@@ -510,13 +590,13 @@ namespace Phoenix.WorkshopTool
                 return success;
             });
 
-            return Task;
+            return task;
         }
 
-        static bool ProcessItemsUpload(WorkshopType type, List<string> paths, Options options)
+        private static bool ProcessItemsUpload(WorkshopType type, List<string> paths, Options options)
         {
-            bool success = true;
-            for (int idx = 0; idx < paths.Count; idx++)
+            var success = true;
+            for (var idx = 0; idx < paths.Count; idx++)
             {
                 var pathname = Path.GetFullPath(paths[idx]);
 
@@ -525,16 +605,18 @@ namespace Phoenix.WorkshopTool
                 {
                     if (options.Compile)
                     {
-                        MySandboxGame.Log.WriteLineAndConsole(string.Format("'--compile' option not valid with a ModID: {0}", id));
+                        MySandboxGame.Log.WriteLineAndConsole(
+                            string.Format("'--compile' option not valid with a ModID: {0}", id));
                         continue;
                     }
+
                     pathname = paths[idx];
                 }
 
                 var tags = options.Tags;
 
                 // If user comma-separated the tags, split them
-                if(tags != null && tags.Length == 1)
+                if (tags != null && tags.Length == 1)
                 {
                     tags = tags[0].Split(',', ';');
                 }
@@ -548,12 +630,14 @@ namespace Phoenix.WorkshopTool
                 if (!string.IsNullOrEmpty(options.DescriptionFile))
                 {
                     if (!Path.IsPathRooted(options.DescriptionFile))
-                        options.DescriptionFile = Path.GetFullPath(Path.Combine(LaunchDirectory, options.DescriptionFile));
+                        options.DescriptionFile =
+                            Path.GetFullPath(Path.Combine(LaunchDirectory, options.DescriptionFile));
 
                     if (File.Exists(options.DescriptionFile))
                         description = File.ReadAllText(options.DescriptionFile);
                     else
-                        MySandboxGame.Log.WriteLineAndConsole(string.Format("Unable to set description, file does not exist: {0}", options.DescriptionFile));
+                        MySandboxGame.Log.WriteLineAndConsole(string.Format(
+                            "Unable to set description, file does not exist: {0}", options.DescriptionFile));
                 }
 
                 // Read the changelog from a file, if detected
@@ -570,17 +654,22 @@ namespace Phoenix.WorkshopTool
 
                     if (File.Exists(options.Changelog))
                     {
-                        MySandboxGame.Log.WriteLineAndConsole(string.Format("Reading changelog from file: {0}", options.Changelog));
+                        MySandboxGame.Log.WriteLineAndConsole(string.Format("Reading changelog from file: {0}",
+                            options.Changelog));
                         changelog = File.ReadAllText(options.Changelog);
-                    }                    
+                    }
                 }
 
-                var mod = new Uploader(type, pathname, tags, options.ExcludeExtensions, options.IgnorePaths, options.Compile, options.DryRun, options.Development, options.Visibility, options.Force, options.Thumbnail, options.DLCs, options.Dependencies, description, options.Changelog);
+                var mod = new Uploader(type, pathname, tags, options.ExcludeExtensions, options.IgnorePaths,
+                    options.Compile, options.DryRun, options.Development, options.Visibility, options.Force,
+                    options.Thumbnail, options.DLCs, options.Dependencies, description, options.Changelog);
                 if (options.UpdateOnly && mod.ModId == 0)
                 {
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("--update-only passed, skipping: {0}", mod.Title));
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("--update-only passed, skipping: {0}",
+                        mod.Title));
                     continue;
                 }
+
                 MySandboxGame.Log.WriteLineAndConsole(string.Format("Processing {0}: {1}", type.ToString(), mod.Title));
 
                 if (mod.Compile())
@@ -605,7 +694,8 @@ namespace Phoenix.WorkshopTool
                     {
                         if (mod.ModId == 0)
                         {
-                            MySandboxGame.Log.WriteLineAndConsole(string.Format("Mod not published, skipping: {0}", mod.Title));
+                            MySandboxGame.Log.WriteLineAndConsole(string.Format("Mod not published, skipping: {0}",
+                                mod.Title));
                             success = false;
                         }
                         else
@@ -618,25 +708,29 @@ namespace Phoenix.WorkshopTool
                 }
                 else
                 {
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Skipping {0}: {1}", type.ToString(), mod.Title));
+                    MySandboxGame.Log.WriteLineAndConsole(
+                        string.Format("Skipping {0}: {1}", type.ToString(), mod.Title));
                     success = false;
                 }
 
                 MySandboxGame.Log.WriteLineAndConsole(string.Empty);
             }
+
             return success;
         }
-#endregion  Upload
 
-#region Download
-        static System.Threading.Tasks.Task<bool> DownloadMods(Options options)
+        #endregion Upload
+
+        #region Download
+
+        private static Task<bool> DownloadMods(Options options)
         {
             // Get PublishItemBlocking internal method via reflection
             MySandboxGame.Log.WriteLineAndConsole(string.Empty);
 
-            var Task = System.Threading.Tasks.Task<bool>.Factory.StartNew(() =>
+            var Task = Task<bool>.Factory.StartNew(() =>
             {
-                bool success = true;
+                var success = true;
 
                 MySandboxGame.Log.WriteLineAndConsole("Beginning batch workshop download...");
                 MySandboxGame.Log.WriteLineAndConsole(string.Empty);
@@ -646,12 +740,14 @@ namespace Phoenix.WorkshopTool
                     var items = new List<MyWorkshopItem>();
 
                     // get collection information
-                    options.Collections.ForEach(s => items.AddRange(WorkshopHelper.GetCollectionDetails(ulong.Parse(s))));
+                    options.Collections.ForEach(
+                        s => items.AddRange(WorkshopHelper.GetCollectionDetails(ulong.Parse(s))));
 
                     options.ModPaths = CombineCollectionWithList(WorkshopType.Mod, items, options.ModPaths);
                     options.Blueprints = CombineCollectionWithList(WorkshopType.Blueprint, items, options.Blueprints);
 #if SE
-                    options.IngameScripts = CombineCollectionWithList(WorkshopType.IngameScript, items, options.IngameScripts);
+                    options.IngameScripts =
+                        CombineCollectionWithList(WorkshopType.IngameScript, items, options.IngameScripts);
 #endif
                     options.Worlds = CombineCollectionWithList(WorkshopType.World, items, options.Worlds);
                     options.Scenarios = CombineCollectionWithList(WorkshopType.Scenario, items, options.Scenarios);
@@ -677,7 +773,7 @@ namespace Phoenix.WorkshopTool
             return Task;
         }
 
-        static bool ProcessItemsDownload(WorkshopType type, string[] paths, Options options)
+        private static bool ProcessItemsDownload(WorkshopType type, string[] paths, Options options)
         {
             if (paths == null)
                 return true;
@@ -695,9 +791,9 @@ namespace Phoenix.WorkshopTool
             if (MyWorkshop.GetItemsBlocking(modids, items))
 #endif
             {
-                System.Threading.Thread.Sleep(1000); // Fix for DLC not being filled in
-                
-                bool success = false;
+                Thread.Sleep(1000); // Fix for DLC not being filled in
+
+                var success = false;
                 if (type == WorkshopType.Mod)
                 {
 #if SE
@@ -720,7 +816,8 @@ namespace Phoenix.WorkshopTool
                             loopsuccess = MyWorkshop.DownloadBlueprintBlocking(item, null);
 #endif
                             if (!loopsuccess)
-                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!", item.Id));
+                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!",
+                                    item.Id));
                             else
                                 success = true;
                         }
@@ -733,7 +830,8 @@ namespace Phoenix.WorkshopTool
                         {
                             loopsuccess = MyWorkshop.DownloadScriptBlocking(item);
                             if (!loopsuccess)
-                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!", item.Id));
+                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!",
+                                    item.Id));
                             else
                                 success = true;
                         }
@@ -744,9 +842,9 @@ namespace Phoenix.WorkshopTool
                     {
                         var loopsuccess = false;
                         string path;
-                        MyWorkshop.MyWorkshopPathInfo pathinfo = type == WorkshopType.World ?
-                                                                MyWorkshop.MyWorkshopPathInfo.CreateWorldInfo() :
-                                                                MyWorkshop.MyWorkshopPathInfo.CreateScenarioInfo();
+                        var pathinfo = type == WorkshopType.World
+                            ? MyWorkshop.MyWorkshopPathInfo.CreateWorldInfo()
+                            : MyWorkshop.MyWorkshopPathInfo.CreateScenarioInfo();
 
                         foreach (var item in items)
                         {
@@ -754,11 +852,13 @@ namespace Phoenix.WorkshopTool
                             loopsuccess = MyWorkshop.TryCreateWorldInstanceBlocking(item, pathinfo, out path, false);
                             if (!loopsuccess)
                             {
-                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!", item.Id));
+                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Download of {0} FAILED!",
+                                    item.Id));
                             }
                             else
                             {
-                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Downloaded '{0}' to {1}", item.Title, path));
+                                MySandboxGame.Log.WriteLineAndConsole(string.Format("Downloaded '{0}' to {1}",
+                                    item.Title, path));
                                 success = true;
                             }
                         }
@@ -766,7 +866,8 @@ namespace Phoenix.WorkshopTool
 #endif
                     else
                     {
-                        throw new NotSupportedException(string.Format("Downloading of {0} not yet supported.", type.ToString()));
+                        throw new NotSupportedException(string.Format("Downloading of {0} not yet supported.",
+                            type.ToString()));
                     }
                 }
 
@@ -782,32 +883,44 @@ namespace Phoenix.WorkshopTool
 
                 foreach (var item in items)
                 {
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Downloading mod: {0}; {1}", item.Id, item.Title));
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Downloading mod: {0}; {1}", item.Id,
+                        item.Title));
                     MySandboxGame.Log.WriteLineAndConsole(string.Format("Visibility: {0}", item.Visibility));
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Tags: {0}", string.Join(", ", string.Join(", ", item.Tags))));
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Tags: {0}",
+                        string.Join(", ", string.Join(", ", item.Tags))));
 
 #if SE
                     MySandboxGame.Log.WriteLineAndConsole(string.Format("DLC requirements: {0}",
-                        (item.DLCs.Count > 0 ? string.Join(", ", item.DLCs.Select(i =>
-                        {
-                            try { return Sandbox.Game.MyDLCs.DLCs[i].Name; }
-                            catch { return $"Unknown({i})"; }
-                        })) : "None")));
+                        item.DLCs.Count > 0
+                            ? string.Join(", ", item.DLCs.Select(i =>
+                            {
+                                try
+                                {
+                                    return MyDLCs.DLCs[i].Name;
+                                }
+                                catch
+                                {
+                                    return $"Unknown({i})";
+                                }
+                            }))
+                            : "None"));
 #endif
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Dependencies: {0}", (item.Dependencies.Count > 0 ? string.Empty : "None")));
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Dependencies: {0}",
+                        item.Dependencies.Count > 0 ? string.Empty : "None"));
 
                     if (item.Dependencies.Count > 0)
                     {
-                        List<MyWorkshopItem> depItems = new List<MyWorkshopItem>();
+                        var depItems = new List<MyWorkshopItem>();
 #if SE
                         if (MyWorkshop.GetItemsBlockingUGC(item.Dependencies, depItems))
 #else
                         if (MyWorkshop.GetItemsBlocking(item.Dependencies, depItems))
 #endif
-                            depItems.ForEach(i => MySandboxGame.Log.WriteLineAndConsole(string.Format("{0,15} -> {1}", 
+                            depItems.ForEach(i => MySandboxGame.Log.WriteLineAndConsole(string.Format("{0,15} -> {1}",
                                 i.Id, i.Title.Substring(0, Math.Min(i.Title.Length, Console.WindowWidth - 45)))));
                         else
-                            MySandboxGame.Log.WriteLineAndConsole(string.Format("     {0}", string.Join(", ", item.Dependencies)));
+                            MySandboxGame.Log.WriteLineAndConsole(string.Format("     {0}",
+                                string.Join(", ", item.Dependencies)));
                     }
 
                     MySandboxGame.Log.WriteLineAndConsole(string.Format("Location: {0}", item.Folder));
@@ -817,17 +930,21 @@ namespace Phoenix.WorkshopTool
                         var mod = new Downloader(downloadPath, item);
                         mod.Extract();
                     }
+
                     MySandboxGame.Log.WriteLineAndConsole(string.Empty);
                 }
             }
+
             return true;
         }
-#endregion Download
 
-#region Pathing
-        static string[] TestPathAndMakeAbsolute(WorkshopType type, string[] paths)
+        #endregion Download
+
+        #region Pathing
+
+        private static string[] TestPathAndMakeAbsolute(WorkshopType type, string[] paths)
         {
-            for (int idx = 0; paths != null && idx < paths.Length; idx++)
+            for (var idx = 0; paths != null && idx < paths.Length; idx++)
             {
                 // If the passed in path doesn't exist, and is relative, try to match it with the expected data directory
                 if (!Directory.Exists(paths[idx]) && !Path.IsPathRooted(paths[idx]))
@@ -839,27 +956,29 @@ namespace Phoenix.WorkshopTool
                         paths[idx] = newpath;
                 }
             }
+
             return paths;
         }
 
         /// <summary>
-        /// Processes list of files, and returns a glob expanded list.
+        ///     Processes list of files, and returns a glob expanded list.
         /// </summary>
         /// <param name="paths"></param>
         /// <returns></returns>
-        static List<string> GetGlobbedPaths(string[] paths)
+        private static List<string> GetGlobbedPaths(string[] paths)
         {
-            List<string> itemPaths = new List<string>();
+            var itemPaths = new List<string>();
 
             if (paths == null)
                 return itemPaths;
 
             foreach (var path in paths)
             {
-                if (!Directory.Exists(Path.GetDirectoryName(path)) && ulong.TryParse(path, out ulong id))
+                if (!Directory.Exists(Path.GetDirectoryName(path)) && ulong.TryParse(path, out var id))
                 {
                     // Kind of hacky right now
-                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Detected ModID, and directory not found: {0}", path));
+                    MySandboxGame.Log.WriteLineAndConsole(string.Format("Detected ModID, and directory not found: {0}",
+                        path));
                     itemPaths.Add(path);
                     continue;
                 }
@@ -870,92 +989,18 @@ namespace Phoenix.WorkshopTool
                     MySandboxGame.Log.WriteLineAndConsole(string.Format("Directory not found, skipping: {0}", path));
 
                 itemPaths.AddRange(dirs
-                    .Where(i => !(Path.GetFileName(i).StartsWith(".") ||                // Ignore directories starting with "." (eg. ".vs")
-                                Path.GetFileName(i).StartsWith(Constants.SEWT_Prefix))) // also ignore directories starting with "[_SEWT_]" (downloaded by this mod)
-                            .Select(i => i).ToList());
+                    .Where(i =>
+                        !(Path.GetFileName(i).StartsWith(".") || // Ignore directories starting with "." (eg. ".vs")
+                          Path.GetFileName(i)
+                              .StartsWith(Constants
+                                  .SEWT_Prefix)
+                            )) // also ignore directories starting with "[_SEWT_]" (downloaded by this mod)
+                    .Select(i => i).ToList());
             }
+
             return itemPaths;
         }
-#endregion Pathing
 
-        protected virtual void AuthenticateWorkshop()
-        {
-        }
-
-        private void ListDLCs()
-        {
-#if SE
-            MySandboxGame.Log.WriteLineAndConsole("Valid DLC:");
-            foreach (var dlc in Sandbox.Game.MyDLCs.DLCs.Values)
-            {
-                MySandboxGame.Log.WriteLineAndConsole($"Name: {dlc.Name}, ID: {dlc.AppId}");
-            }
-#endif
-        }
-
-        static string[] CombineCollectionWithList(WorkshopType type, List<MyWorkshopItem> items, string[] existingitems)
-        {
-            var tempList = new List<string>();
-
-            // Check mods
-            items.Where(i => i.Tags.Contains(type.ToString(), StringComparer.InvariantCultureIgnoreCase))
-                                .ForEach(i => tempList.Add(
-                                    i.Id.ToString()
-                                    ));
-
-            if (tempList.Count > 0)
-            {
-                if(existingitems != null)
-                    tempList = tempList.Union(existingitems).ToList();
-
-                return tempList.ToArray();
-            }
-            return existingitems;
-        }
-
-        public static void CopyAll(string source, string target)
-        {
-            CopyAllConditional(source, target, (string s) => true);
-        }
-
-        public static void CopyAllConditional(string source, string target, Predicate<string> condition)
-        {
-            if (!Directory.Exists(target))
-                Directory.CreateDirectory(target);
-
-            foreach (string file in Directory.EnumerateFiles(source, "*.*", SearchOption.AllDirectories))
-            {
-                if (condition(file))
-                {
-                    string fileName = Path.GetFileName(file);
-                    string fileDirectory = Path.GetDirectoryName(file);
-                    string relativePath = GetRelativePath(source, fileDirectory);
-                    if (!string.IsNullOrWhiteSpace(relativePath))
-                    {
-                        Directory.CreateDirectory(Path.Combine(target, relativePath));
-                        File.Copy(file, Path.Combine(target, relativePath, fileName), true);
-                    }
-                    else
-                    {
-                        File.Copy(file, Path.Combine(target, fileName), true);
-                    }
-                }
-            }
-        }
-
-        private static string GetRelativePath(string relative_to, string path)
-        {
-            if (relative_to.EndsWith("\\"))
-                relative_to = relative_to.Remove(relative_to.Length - 1);
-
-            if (relative_to.Equals(path, StringComparison.InvariantCultureIgnoreCase))
-                return string.Empty;
-
-            string relativePath = path.Remove(0, relative_to.Length);
-            if (relativePath.StartsWith("\\"))
-                relativePath = relativePath.Remove(0, 1);
-
-            return relativePath;
-        }
+        #endregion Pathing
     }
 }

@@ -1,21 +1,18 @@
-﻿using Sandbox;
-using Steamworks;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using VRage;
-using VRage.GameServices;
-#if SE
+﻿#if SE
 using VRage.Utils;
 #else
 using VRage.Logging;
 #endif
+using System;
+using System.Diagnostics;
+using Sandbox;
+using Steamworks;
+using VRage.GameServices;
 
 namespace Phoenix.WorkshopTool
 {
 #if SE
-    static class MyDebug
+    internal static class MyDebug
     {
         [DebuggerStepThrough]
         public static void AssertDebug(bool condition, string message = null)
@@ -40,7 +37,7 @@ namespace Phoenix.WorkshopTool
     public static class MySteamHelper
     {
         public static ERemoteStoragePublishedFileVisibility ToSteam(
-          this MyPublishedFileVisibility visibility)
+            this MyPublishedFileVisibility visibility)
         {
             switch (visibility)
             {
@@ -51,12 +48,12 @@ namespace Phoenix.WorkshopTool
                 case MyPublishedFileVisibility.Private:
                     return ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate;
                 default:
-                    return (ERemoteStoragePublishedFileVisibility)(int)visibility;
+                    return (ERemoteStoragePublishedFileVisibility) (int) visibility;
             }
         }
 
         public static MyPublishedFileVisibility ToService(
-          this ERemoteStoragePublishedFileVisibility visibility)
+            this ERemoteStoragePublishedFileVisibility visibility)
         {
             switch (visibility)
             {
@@ -67,7 +64,7 @@ namespace Phoenix.WorkshopTool
                 case ERemoteStoragePublishedFileVisibility.k_ERemoteStoragePublishedFileVisibilityPrivate:
                     return MyPublishedFileVisibility.Private;
                 default:
-                    return (MyPublishedFileVisibility)(int)visibility;
+                    return (MyPublishedFileVisibility) (int) visibility;
             }
         }
     }
@@ -75,7 +72,7 @@ namespace Phoenix.WorkshopTool
     public static class LoggingHelper
     {
         /// <summary>
-        /// Logs an exception.
+        ///     Logs an exception.
         /// </summary>
         /// <param name="ex">Exception to log.</param>
         /// <param name="customMessage">Message text to log, exception message will be appended.</param>
@@ -87,7 +84,7 @@ namespace Phoenix.WorkshopTool
         }
 
         /// <summary>
-        /// This is a log wrapper for ME.
+        ///     This is a log wrapper for ME.
         /// </summary>
         /// <param name="log"></param>
         /// <param name="msg"></param>

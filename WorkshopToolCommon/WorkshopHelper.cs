@@ -1,31 +1,37 @@
-﻿using Sandbox.Engine.Networking;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-using VRage.FileSystem;
-using MySubscribedItem = VRage.GameServices.MyWorkshopItem;
+using System.Xml;
 using Sandbox;
+using Sandbox.Engine.Networking;
+using Sandbox.Game.Gui;
+using Steamworks;
+using VRage.FileSystem;
 using VRage.GameServices;
+using MySubscribedItem = VRage.GameServices.MyWorkshopItem;
 #if SE
 using VRage;
-using VRage.Utils;
 #else
 using MySteam = VRage.GameServices.MyGameService;
+
 #endif
 
 namespace Phoenix.WorkshopTool
 {
-    class WorkshopHelper
+    internal class WorkshopHelper
     {
+        private static Dictionary<uint, Action<bool, string>>
+            m_callbacks = new Dictionary<uint, Action<bool, string>>();
+
+        private static string _requestURL = "https://api.steampowered.com/{0}/{1}/v{2:0000}/?format=xml";
 #if SE
-        static IMyGameService MySteam { get => (IMyGameService)MyServiceManager.Instance.GetService<IMyGameService>(); }
+        private static IMyGameService MySteam =>
+            (IMyGameService) MyServiceManager.Instance.GetService<IMyGameService>();
 #endif
-        static private Dictionary<uint, Action<bool, string>> m_callbacks = new Dictionary<uint, Action<bool, string>>();
-        static string _requestURL = "https://api.steampowered.com/{0}/{1}/v{2:0000}/?format=xml";
 
         public static string GetWorkshopItemPath(WorkshopType type, bool local = true)
         {
@@ -38,7 +44,8 @@ namespace Phoenix.WorkshopTool
                     break;
 #if SE
                 case WorkshopType.IngameScript:
-                    downloadPath = Path.Combine(MyFileSystem.UserDataPath, Sandbox.Game.Gui.MyGuiIngameScriptsPage.SCRIPTS_DIRECTORY, local ? "local" : "workshop");
+                    downloadPath = Path.Combine(MyFileSystem.UserDataPath,
+                        MyGuiIngameScriptsPage.SCRIPTS_DIRECTORY, local ? "local" : "workshop");
                     break;
 #endif
                 case WorkshopType.World:
@@ -46,16 +53,23 @@ namespace Phoenix.WorkshopTool
                     downloadPath = Path.Combine(MyFileSystem.UserDataPath, "Saves", MySteam.UserId.ToString());
                     break;
             }
+
             return downloadPath;
         }
 
-        public static void PublishDependencies(ulong modId, ulong[] dependenciesToAdd, ulong[] dependenciesToRemove = null)
+        public static void PublishDependencies(ulong modId, ulong[] dependenciesToAdd,
+            ulong[] dependenciesToRemove = null)
         {
-            dependenciesToRemove?.ForEach(id => Steamworks.SteamUGC.RemoveDependency((Steamworks.PublishedFileId_t)modId, (Steamworks.PublishedFileId_t)id));
-            dependenciesToAdd?.ForEach(id => Steamworks.SteamUGC.AddDependency((Steamworks.PublishedFileId_t)modId, (Steamworks.PublishedFileId_t)id));
+            dependenciesToRemove?.ForEach(id =>
+                SteamUGC.RemoveDependency((PublishedFileId_t) modId,
+                    (PublishedFileId_t) id));
+            dependenciesToAdd?.ForEach(id =>
+                SteamUGC.AddDependency((PublishedFileId_t) modId,
+                    (PublishedFileId_t) id));
         }
 
         #region Collections
+
         public static IEnumerable<MySubscribedItem> GetCollectionDetails(ulong modid)
         {
             IEnumerable<MySubscribedItem> details = new List<MySubscribedItem>();
@@ -64,12 +78,13 @@ namespace Phoenix.WorkshopTool
 
             using (var mrEvent = new ManualResetEvent(false))
             {
-                GetCollectionDetails(new List<ulong>() { modid }, (IOFailure, result) =>
+                GetCollectionDetails(new List<ulong>() {modid}, (IOFailure, result) =>
                 {
                     if (!IOFailure)
                     {
                         details = result;
                     }
+
                     mrEvent.Set();
                 });
 
@@ -83,21 +98,23 @@ namespace Phoenix.WorkshopTool
         }
 
         // code from Rexxar, modified to use XML
-        public static bool GetCollectionDetails(IEnumerable<ulong> publishedFileIds, Action<bool, IEnumerable<MySubscribedItem>> callback)
+        public static bool GetCollectionDetails(IEnumerable<ulong> publishedFileIds,
+            Action<bool, IEnumerable<MySubscribedItem>> callback)
         {
-            string xml = "";
+            var xml = "";
             var modsInCollection = new List<MySubscribedItem>();
-            bool failure = false;
+            var failure = false;
             MySandboxGame.Log.IncreaseIndent();
             try
             {
-                var request = WebRequest.Create(string.Format(_requestURL, "ISteamRemoteStorage", "GetCollectionDetails", 1));
+                var request =
+                    WebRequest.Create(string.Format(_requestURL, "ISteamRemoteStorage", "GetCollectionDetails", 1));
                 request.Method = "POST";
                 request.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
 
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 sb.Append("?&collectioncount=").Append(publishedFileIds.Count());
-                int i = 0;
+                var i = 0;
 
                 foreach (var id in publishedFileIds)
                     sb.AppendFormat("&publishedfileids[{0}]={1}", i++, id);
@@ -117,21 +134,23 @@ namespace Phoenix.WorkshopTool
                 {
                     sbr.Append(Encoding.UTF8.GetString(buffer, 0, count));
                 }
+
                 xml = sbr.ToString();
 
-                System.Xml.XmlReaderSettings settings = new System.Xml.XmlReaderSettings()
+                var settings = new XmlReaderSettings()
                 {
-                    DtdProcessing = System.Xml.DtdProcessing.Ignore,
+                    DtdProcessing = DtdProcessing.Ignore,
                 };
 
-                using (System.Xml.XmlReader reader = System.Xml.XmlReader.Create(new StringReader(xml), settings))
+                using (var reader = XmlReader.Create(new StringReader(xml), settings))
                 {
                     reader.ReadToFollowing("result");
 
                     var xmlResult = reader.ReadElementContentAsInt();
                     if (xmlResult != 1 /* OK */)
                     {
-                        MySandboxGame.Log.WriteLine(string.Format("Failed to download collections: result = {0}", xmlResult));
+                        MySandboxGame.Log.WriteLine(string.Format("Failed to download collections: result = {0}",
+                            xmlResult));
                         failure = true;
                     }
 
@@ -140,7 +159,9 @@ namespace Phoenix.WorkshopTool
 
                     if (count != publishedFileIds.Count())
                     {
-                        MySandboxGame.Log.WriteLine(string.Format("Failed to download collection details: Expected {0} results, got {1}", publishedFileIds.Count(), count));
+                        MySandboxGame.Log.WriteLine(string.Format(
+                            "Failed to download collection details: Expected {0} results, got {1}",
+                            publishedFileIds.Count(), count));
                     }
 
                     var processed = new List<ulong>(publishedFileIds.Count());
@@ -148,14 +169,15 @@ namespace Phoenix.WorkshopTool
                     for (i = 0; i < publishedFileIds.Count(); ++i)
                     {
                         reader.ReadToFollowing("publishedfileid");
-                        ulong publishedFileId = Convert.ToUInt64(reader.ReadElementContentAsString());
+                        var publishedFileId = Convert.ToUInt64(reader.ReadElementContentAsString());
 
                         reader.ReadToFollowing("result");
                         xmlResult = reader.ReadElementContentAsInt();
 
                         if (xmlResult == 1 /* OK */)
                         {
-                            MySandboxGame.Log.WriteLineAndConsole(string.Format("Collection {0} contains the following items:", publishedFileId.ToString()));
+                            MySandboxGame.Log.WriteLineAndConsole(string.Format(
+                                "Collection {0} contains the following items:", publishedFileId.ToString()));
 
                             reader.ReadToFollowing("children");
                             using (var sub = reader.ReadSubtree())
@@ -166,14 +188,19 @@ namespace Phoenix.WorkshopTool
 
                                     // SE and ME have different methods, why?
 #if SE
-                                    if (MyWorkshop.GetItemsBlockingUGC(new List<ulong>() { Convert.ToUInt64(sub.ReadElementContentAsString()) }, results))
+                                    if (MyWorkshop.GetItemsBlockingUGC(
+                                        new List<ulong>()
+                                            {Convert.ToUInt64(sub.ReadElementContentAsString())}, results))
 #else
-                                    if (MyWorkshop.GetItemsBlocking(new List<ulong>() { Convert.ToUInt64(sub.ReadElementContentAsString()) }, results))
+                                    if (MyWorkshop.GetItemsBlocking(
+                                        new List<ulong>()
+                                            {Convert.ToUInt64(sub.ReadElementContentAsString())}, results))
 #endif
                                     {
                                         var item = results[0];
 
-                                        MySandboxGame.Log.WriteLineAndConsole(string.Format("Id - {0}, title - {1}", item.Id, item.Title));
+                                        MySandboxGame.Log.WriteLineAndConsole(string.Format("Id - {0}, title - {1}",
+                                            item.Id, item.Title));
                                         modsInCollection.Add(item);
                                     }
                                 }
@@ -183,7 +210,9 @@ namespace Phoenix.WorkshopTool
                         }
                         else
                         {
-                            MySandboxGame.Log.WriteLineAndConsole(string.Format("Item {0} returned the following error: {1}", publishedFileId.ToString(), (Steamworks.EResult)xmlResult));
+                            MySandboxGame.Log.WriteLineAndConsole(string.Format(
+                                "Item {0} returned the following error: {1}", publishedFileId.ToString(),
+                                (EResult) xmlResult));
                             failure = true;
                         }
                     }
@@ -199,8 +228,10 @@ namespace Phoenix.WorkshopTool
                 MySandboxGame.Log.DecreaseIndent();
                 callback(failure, modsInCollection);
             }
+
             return failure;
         }
-#endregion Collections
+
+        #endregion Collections
     }
 }

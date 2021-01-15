@@ -1,6 +1,6 @@
 ﻿namespace Phoenix.WorkshopTool
 {
-    interface IMod
+    internal interface IMod
     {
         string Title { get; }
         ulong ModId { get; }

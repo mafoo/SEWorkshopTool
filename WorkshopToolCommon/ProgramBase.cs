@@ -1,8 +1,6 @@
-﻿using Gwindalmir.Updater;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Reflection;
-using System.Text;
+using Gwindalmir.Updater;
 
 namespace Phoenix.WorkshopTool
 {
@@ -26,11 +24,13 @@ namespace Phoenix.WorkshopTool
 
                     if (!string.IsNullOrEmpty(asset?.Url))
                     {
-                        logMethod($"Update Check: UPDATE AVAILABLE: {Assembly.GetEntryAssembly().GetName().Name} {release.TagName}");
+                        logMethod(
+                            $"Update Check: UPDATE AVAILABLE: {Assembly.GetEntryAssembly().GetName().Name} {release.TagName}");
                         logMethod($"Download at: {asset.Url}");
                         return;
                     }
                 }
+
                 logMethod($"Update Check: No update available");
             }
             catch (Exception ex)
